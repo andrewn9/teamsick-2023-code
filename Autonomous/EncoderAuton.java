@@ -10,10 +10,12 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.IMU;
+
+import org.checkerframework.checker.units.qual.Angle;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 // For Math.PI
 import java.lang.Math;
@@ -86,6 +88,16 @@ public class EncoderAuton extends LinearOpMode{
 
     final double DRIVE_POWER = 0.5;
 
+    // Returns the sign of a number
+    private int sign(int value)
+    {
+	    if (value < 0)
+		    return -1;
+	    if (value > 0)
+		    return 1;
+	    return 0;
+    }
+
     // Returns true if any drive motors are busy
     private boolean driveMotorsAreBusy()
     {
@@ -140,6 +152,40 @@ public class EncoderAuton extends LinearOpMode{
 	for (DcMotor m : driveMotors)
 		m.setPower(0);
     }
+
+    // Turns the robot
+    private void turn(int degrees)
+    {
+        double botHeading = 0;
+        imu.resetYaw();
+
+	// Sign of degrees
+        // + = right turn, - = left turn
+	int dsign = sign(degrees);
+
+        while (botHeading < degree -5 * dsign)
+        {
+            // Output yaw
+            botHeading = -imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
+            telemetry.addData("Bot Heading", botHeading);
+            telemetry.update();
+ 
+            // Turn with motors
+            fl.setPower(DRIVE_POWER * dsign);
+            fr.setPower(DRIVE_POWER * dsign);
+            bl.setPower(-DRIVE_POWER * dsign);
+            br.setPower(-DRIVE_POWER * dsign);
+
+	    // Wait for a short while before checking heading again
+            sleep(50);
+        }
+
+        // Brake motors
+        fl.setPower(0);
+        bl.setPower(0);
+        fr.setPower(0);
+        br.setPower(0);
+    }
     
     @Override
     public void runOpMode()
@@ -176,8 +222,6 @@ public class EncoderAuton extends LinearOpMode{
         // Move robot forward 1"
 	move(MoveDir.north, (int) TICKS_PER_INCH);
 
-        // TODO: initialize imu and create methods to turn a given # degrees
-	
         // Yield program until stop is requested
         while (opModeIsActive())
 		idle();
